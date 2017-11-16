@@ -1,20 +1,72 @@
-import serial  
+import serial
+import time
 import timeit
+import math
+import matplotlib.pyplot as plt
+import threading
 
-motor=serial.Serial("/dev/ttyUSB0",115200,timeout=0.5)
-motor.write(b"ANSW0\r")
-motor.write(b"EN\r")
-motor.write(b"V100\r")
-motor.write(b"BINSEND1")
-motor.write(b"\xc8\x00\xca\x04")
-for i in range(100):
+total=100
+div=10
+mvelo= [0] * total
+mveli=[0]*total
+mcur=[0]*total
+time=[0]*total
+
+
+def hex2dec(rawhex):
+    if int(rawhex,16) >32767:
+        ab =int(rawhex,16)-65535
+    else:
+        ab=int(rawhex,16)
+    return ab
+
+
+def init():
+    global motor
+    motor = serial.Serial("/dev/ttyUSB1", 115200, timeout=0.5)
+    motor.write(b"ANSW0\r")
+    motor.write(b"EN\r")
+    motor.write(b"BINSEND1")
+    motor.write(b"\xc8\x00\xca\x04")
+
+
+def control():
+    motor.write(b"V" + bytes(str(mveli[i]), "ascii") + b"\r")
     motor.write(b"\xc9")
-    time_start = timeit.default_timer()
-    mdata=motor.read(5)
-    period=timeit.default_timer()-time_start
-    hdata=mdata.hex()
-    print("Actual celocity:"+hdata[2:4]+hdata[0:2])
-    print("Motor current:"+hdata[6:8]+hdata[4:6])
-    print("Raw:"+hdata)
-    print(period)
-motor.close()
+    mdata = motor.read(5)
+    hdata = mdata.hex()
+    mvelo[i] = hex2dec(hdata[2:4] + hdata[0:2])
+    time[i] = timeit.default_timer() - time_start
+    mcur[i] = hex2dec(hdata[6:8] + hdata[4:6]) * 4
+
+
+def disp(ds):
+    print("input:"+str(time[i-1]-time[i-2]))
+
+
+def close():
+    global motor
+    motor.write(b"V0\r")
+    motor.write(b"DI\r")
+    motor.close()
+
+
+threads=[]
+init()
+
+time_start = timeit.default_timer()
+for i in range(total):
+    mveli[i] = int(100 * math.sin(i / div))
+    t1 = threading.Thread(target=control)
+    t2 = threading.Thread(target=disp,args=(i,))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+close()
+plt.figure(1)
+plt.plot(time, mvelo)
+plt.plot(time,mveli)
+plt.plot(time, mcur)
+plt.show()
+
