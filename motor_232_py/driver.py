@@ -1,12 +1,11 @@
 import serial
 import time
 import timeit
-import math
 import matplotlib.pyplot as plt
 import threading
+import random
 
-total=100
-div=10
+total=1000
 mvelo= [0] * total
 mveli=[0]*total
 mcur=[0]*total
@@ -19,6 +18,13 @@ def hex2dec(rawhex):
     else:
         ab=int(rawhex,16)
     return ab
+
+
+def writefd(fd,data):
+    for i in data:
+        fd.write(str(i))
+        fd.write("\t")
+    fd.write("\n")
 
 
 def init():
@@ -56,7 +62,7 @@ init()
 
 time_start = timeit.default_timer()
 for i in range(total):
-    mveli[i] = int(100 * math.sin(i / div))
+    mveli[i] = random.randint(-500,500)
     t1 = threading.Thread(target=control)
     t2 = threading.Thread(target=disp,args=(i,))
     t1.start()
@@ -64,6 +70,14 @@ for i in range(total):
     t1.join()
     t2.join()
 close()
+
+fd=open('data.dat','w')
+writefd(fd,time)
+writefd(fd,mveli)
+writefd(fd,mvelo)
+writefd(fd,mcur)
+fd.close()
+
 plt.figure(1)
 plt.plot(time, mvelo)
 plt.plot(time,mveli)
